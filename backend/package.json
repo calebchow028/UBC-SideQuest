@@ -1,0 +1,41 @@
+{
+  "name": "sidequest-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UBC SideQuest backend: profiles, matchmaking, shared AI quests",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "smoke": "node scripts/smoke-test.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "express-oauth2-jwt-bearer": "^1.11.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.5",
+    "@types/supertest": "^7.2.1",
+    "@vitest/coverage-v8": "^5.1.0",
+    "jose": "^6.2.15",
+    "supertest": "^7.3.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
