@@ -7,9 +7,8 @@ import time
 from google import genai
 
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-MAX_WAIT_SECONDS = 120
-POLL_INTERVAL_SECONDS = 2
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
+MAX_WAIT_SECONDS = 30
 
 
 def generate_quest(student_a, student_b):
@@ -98,40 +97,29 @@ title, description, location, cost, duration_minutes, vibe.
 
         client = genai.Client(api_key=api_key)
 
-        # Submit the request without waiting for generation to finish.
+        
+        # Generate the quest synchronously using Flash-Lite.
         interaction = client.interactions.create(
             model=MODEL,
             input=prompt,
-            background=True,
             generation_config={
-                "thinking_level": "low"
+                "thinking_level": "minimal"
             },
             response_format={
                 "type": "text",
                 "mime_type": "application/json",
                 "schema": quest_schema
-            }
+            },
+            timeout=MAX_WAIT_SECONDS
         )
 
         interaction_id = interaction.id
-        print(f"Gemini interaction started: {interaction_id}", flush=True)
-
-        deadline = time.monotonic() + MAX_WAIT_SECONDS
-
-        # Poll until Gemini finishes or the timeout is reached.
-        while interaction.status in ("queued", "in_progress"):
-            if time.monotonic() >= deadline:
-                raise TimeoutError(
-                    f"Gemini exceeded {MAX_WAIT_SECONDS} seconds"
-                )
-
-            time.sleep(POLL_INTERVAL_SECONDS)
-            interaction = client.interactions.get(id=interaction_id)
 
         if interaction.status != "completed":
             raise RuntimeError(
                 f"Gemini ended with status: {interaction.status}"
             )
+
 
         ai_text = interaction.output_text
 
