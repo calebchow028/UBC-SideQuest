@@ -91,7 +91,7 @@ Do not include Markdown or explanations.
 
         print(f"Gemini interaction started: {interaction.id}")
 
-        deadline = time.monotonic() + 45
+        deadline = time.monotonic() + 120
 
         while interaction.status not in ("completed", "failed", "cancelled"):
             if time.monotonic() >= deadline:
