@@ -29,6 +29,18 @@ def home():
     return {"status": "SideQuest AI Agent is running!"}
 
 
+# Maritime requires GET /health to return 2xx, or it treats the agent as down.
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+# Maritime polls this optional endpoint; this agent has no schedules.
+@app.get("/schedules")
+def schedules():
+    return []
+
+
 @app.post("/generate-quest")
 def create_quest(
     request: QuestRequest,
