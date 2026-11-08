@@ -14,7 +14,9 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as ChatsRouteImport } from './routes/chats'
 import { Route as FriendsRouteImport } from './routes/friends'
 import { Route as HomeRouteImport } from './routes/home'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as QuestRouteImport } from './routes/quest'
+import { Route as QueueRouteImport } from './routes/queue'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as VerifyRouteImport } from './routes/verify'
@@ -44,9 +46,19 @@ const HomeRoute = HomeRouteImport.update({
   path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const QuestRoute = QuestRouteImport.update({
   id: '/quest',
   path: '/quest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QueueRoute = QueueRouteImport.update({
+  id: '/queue',
+  path: '/queue',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -71,7 +83,9 @@ export interface FileRoutesByFullPath {
   '/chats': typeof ChatsRoute
   '/friends': typeof FriendsRoute
   '/home': typeof HomeRoute
+  '/map': typeof MapRoute
   '/quest': typeof QuestRoute
+  '/queue': typeof QueueRoute
   '/signup': typeof SignupRoute
   '/stats': typeof StatsRoute
   '/verify': typeof VerifyRoute
@@ -82,7 +96,9 @@ export interface FileRoutesByTo {
   '/chats': typeof ChatsRoute
   '/friends': typeof FriendsRoute
   '/home': typeof HomeRoute
+  '/map': typeof MapRoute
   '/quest': typeof QuestRoute
+  '/queue': typeof QueueRoute
   '/signup': typeof SignupRoute
   '/stats': typeof StatsRoute
   '/verify': typeof VerifyRoute
@@ -94,7 +110,9 @@ export interface FileRoutesById {
   '/chats': typeof ChatsRoute
   '/friends': typeof FriendsRoute
   '/home': typeof HomeRoute
+  '/map': typeof MapRoute
   '/quest': typeof QuestRoute
+  '/queue': typeof QueueRoute
   '/signup': typeof SignupRoute
   '/stats': typeof StatsRoute
   '/verify': typeof VerifyRoute
@@ -107,7 +125,9 @@ export interface FileRouteTypes {
     | '/chats'
     | '/friends'
     | '/home'
+    | '/map'
     | '/quest'
+    | '/queue'
     | '/signup'
     | '/stats'
     | '/verify'
@@ -118,7 +138,9 @@ export interface FileRouteTypes {
     | '/chats'
     | '/friends'
     | '/home'
+    | '/map'
     | '/quest'
+    | '/queue'
     | '/signup'
     | '/stats'
     | '/verify'
@@ -129,7 +151,9 @@ export interface FileRouteTypes {
     | '/chats'
     | '/friends'
     | '/home'
+    | '/map'
     | '/quest'
+    | '/queue'
     | '/signup'
     | '/stats'
     | '/verify'
@@ -141,7 +165,9 @@ export interface RootRouteChildren {
   ChatsRoute: typeof ChatsRoute
   FriendsRoute: typeof FriendsRoute
   HomeRoute: typeof HomeRoute
+  MapRoute: typeof MapRoute
   QuestRoute: typeof QuestRoute
+  QueueRoute: typeof QueueRoute
   SignupRoute: typeof SignupRoute
   StatsRoute: typeof StatsRoute
   VerifyRoute: typeof VerifyRoute
@@ -184,11 +210,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/quest': {
       id: '/quest'
       path: '/quest'
       fullPath: '/quest'
       preLoaderRoute: typeof QuestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/queue': {
+      id: '/queue'
+      path: '/queue'
+      fullPath: '/queue'
+      preLoaderRoute: typeof QueueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -221,7 +261,9 @@ const rootRouteChildren: RootRouteChildren = {
   ChatsRoute: ChatsRoute,
   FriendsRoute: FriendsRoute,
   HomeRoute: HomeRoute,
+  MapRoute: MapRoute,
   QuestRoute: QuestRoute,
+  QueueRoute: QueueRoute,
   SignupRoute: SignupRoute,
   StatsRoute: StatsRoute,
   VerifyRoute: VerifyRoute,

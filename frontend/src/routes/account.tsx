@@ -21,7 +21,7 @@ export const Route = createFileRoute("/account")({
 function Account() {
   const navigate = useNavigate();
   return (
-    <SubPage bg={bg} title="Account" emoji="👤" text="View and edit your account info here soon.">
+    <SubPage bg={bg} title="Account" illustration="account" text="View and edit your account info here soon.">
       <PrimaryButton onClick={() => {
         signOut();
         void navigate({ to: "/", replace: true });

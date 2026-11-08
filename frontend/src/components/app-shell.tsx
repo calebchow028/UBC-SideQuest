@@ -2,11 +2,16 @@ import { Link } from "@tanstack/react-router";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import { SessionGate } from "@/components/session-gate";
 import { ArrowLeft, Compass } from "lucide-react";
+import { CampusIllustration, type CampusIllustrationKind } from "@/components/campus-illustration";
+import goldenFrame from "@/assets/campus-golden-frame.png";
 
 export function Screen({ bg, children, publicPage = false }: { bg: string; children: ReactNode; publicPage?: boolean }) {
   const content = (
     <div className="site-screen relative overflow-hidden bg-background">
-      <img src={bg} alt="" aria-hidden width={768} height={1344} className="scene-image absolute inset-0 h-full w-full object-cover" />
+      <div className="scene-art" aria-hidden="true">
+        <img src={bg} alt="" width={768} height={1344} className="scene-image" />
+        <img src={goldenFrame} alt="" width={768} height={1344} className="scene-frame" />
+      </div>
       <div className="absolute inset-0 scene-fade" />
       <div className="site-content relative mx-auto flex w-full flex-col animate-in fade-in duration-500">
         {children}
@@ -41,11 +46,12 @@ export function Field({ label, ...props }: { label: string } & InputHTMLAttribut
   );
 }
 
-type Variant = "gold" | "blue" | "quest";
+type Variant = "gold" | "blue" | "quest" | "mode";
 const variants: Record<Variant, string> = {
   gold: "bg-primary text-primary-foreground",
   blue: "bg-secondary text-secondary-foreground",
   quest: "bg-accent text-accent-foreground quest-glow",
+  mode: "bg-input text-foreground",
 };
 
 export function pixelButton(variant: Variant = "gold", size: "md" | "lg" = "md") {
@@ -58,7 +64,7 @@ export function PrimaryButton({ variant = "gold", ...props }: ButtonHTMLAttribut
   return <button {...props} className={`${pixelButton(variant)} ${props.className ?? ""}`} />;
 }
 
-export function SubPage({ title, emoji, text, bg, children }: { title: string; emoji: string; text: string; bg: string; children?: ReactNode }) {
+export function SubPage({ title, illustration, text, bg, children }: { title: string; illustration: CampusIllustrationKind; text: string; bg: string; children?: ReactNode }) {
   return (
     <Screen bg={bg}>
       <header className="mb-6">
@@ -66,10 +72,10 @@ export function SubPage({ title, emoji, text, bg, children }: { title: string; e
           <ArrowLeft size={18} aria-hidden="true" /> Home
         </Link>
       </header>
-      <h1 className="text-2xl text-brand text-pixel-shadow">{title}</h1>
+      <h1 className="title-chip text-2xl text-brand">{title}</h1>
       <div className={children ? "mt-8" : "mt-auto"}>
         <Panel className="text-center">
-          <div className="text-5xl">{emoji}</div>
+          <CampusIllustration kind={illustration} />
           <p className="mt-3 text-lg">{text}</p>
         </Panel>
         {children && <div className="mt-8">{children}</div>}

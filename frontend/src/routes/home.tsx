@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Compass, Map, Menu, X } from "lucide-react";
+import { Compass, Menu, X } from "lucide-react";
 import { Logo, PrimaryButton, Screen, pixelButton } from "@/components/app-shell";
 import bg from "@/assets/cartoon-ikb.jpg";
+import { CampusIllustration } from "@/components/campus-illustration";
+import { questPrototype } from "@/lib/quest-prototype";
+import { gameModes, useGameMode } from "@/components/game-mode-provider";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -19,14 +22,16 @@ export const Route = createFileRoute("/home")({
 });
 
 const items = [
-  { to: "/chats", label: "Chats", icon: "💬" },
-  { to: "/friends", label: "Friends", icon: "🤝" },
-  { to: "/stats", label: "Stats", icon: "📊" },
-  { to: "/account", label: "Account", icon: "🛡️" },
+  { to: "/chats", label: "Chats", icon: "chats" },
+  { to: "/friends", label: "Friends", icon: "friends" },
+  { to: "/stats", label: "Stats", icon: "stats" },
+  { to: "/account", label: "Account", icon: "account" },
 ] as const;
 
 function Home() {
   const [open, setOpen] = useState(false);
+  const { activeGameMode, setActiveGameMode } = useGameMode();
+  const activeModeLabel = gameModes.find(mode => mode.value === activeGameMode)?.label;
   return (
     <Screen bg={bg}>
       <header className="flex items-center gap-4">
@@ -36,13 +41,19 @@ function Home() {
         <Logo compact />
       </header>
 
-      {/* Map container: plug a map API in here later */}
-      <div id="map" className="pixel-frame mt-6 flex min-h-[50svh] flex-1 items-center justify-center">
-        <span className="pixel-box flex items-center gap-2 bg-secondary px-4 py-3 font-display text-sm font-bold text-secondary-foreground"><Map size={18} aria-hidden="true" /> Map coming soon</span>
+      <div className="flex-1 min-h-32" />
+      <div className="grid grid-cols-2 gap-3" role="group" aria-label="Game mode">
+        {gameModes.map(mode => (
+          <PrimaryButton key={mode.value} variant="mode" aria-pressed={activeGameMode === mode.value}
+            onClick={() => setActiveGameMode(mode.value)} className="game-mode-button">
+            {mode.label}
+          </PrimaryButton>
+        ))}
       </div>
 
-      <Link to="/quest" className={`mt-8 gap-3 ${pixelButton("quest", "lg")}`}>
-        <Compass size={26} aria-hidden="true" /> Find Quest
+      <Link to={questPrototype.queuePath} className={`mt-8 flex-col gap-1 ${pixelButton("quest", "lg")}`}>
+        <span className="flex items-center gap-3"><Compass size={26} aria-hidden="true" /> Find Quest</span>
+        <span className="text-sm font-semibold" aria-live="polite">Current Mode: {activeModeLabel}</span>
       </Link>
 
       {open && (
@@ -54,7 +65,7 @@ function Home() {
               {items.map(({ to, label, icon }) => (
                 <li key={to}>
                   <Link to={to} className={`${pixelButton("blue")} justify-start gap-3 px-4`}>
-                    <span className="text-lg">{icon}</span> {label}
+                    <CampusIllustration kind={icon} size="menu" /> {label}
                   </Link>
                 </li>
               ))}

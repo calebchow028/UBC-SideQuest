@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { GameModeProvider } from "@/components/game-mode-provider";
 
 function NotFoundComponent() {
   return (
@@ -126,7 +127,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <GameModeProvider><Outlet /></GameModeProvider>
     </QueryClientProvider>
   );
 }

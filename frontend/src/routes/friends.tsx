@@ -13,5 +13,5 @@ export const Route = createFileRoute("/friends")({
       { property: "og:description", content: "View and manage your friends here soon." },
     ],
   }),
-  component: () => <SubPage bg={bg} title="Friends" emoji="🤝" text="View and manage your friends here soon." />,
+  component: () => <SubPage bg={bg} title="Friends" illustration="friends" text="View and manage your friends here soon." />,
 });

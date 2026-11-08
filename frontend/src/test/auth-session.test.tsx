@@ -20,7 +20,7 @@ describe("Sign-out session rules", () => {
     expect(signIn("hayden", "quest-pass")).toBe("ok");
   });
 
-  it.each(["/home", "/account", "/chats", "/friends", "/stats", "/quest", "/verify"])("blocks %s after sign-out and redirects to sign-in", async (pathname) => {
+  it.each(["/home", "/account", "/chats", "/friends", "/stats", "/quest", "/verify", "/queue", "/map"])("blocks %s after sign-out and redirects to sign-in", async (pathname) => {
     navigation.pathname = pathname;
     createAccount("hayden", "quest-pass");
     signOut();

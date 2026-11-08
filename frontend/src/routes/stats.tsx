@@ -13,5 +13,5 @@ export const Route = createFileRoute("/stats")({
       { property: "og:description", content: "Your activity and quest stats will appear here." },
     ],
   }),
-  component: () => <SubPage bg={bg} title="Stats" emoji="📊" text="Your activity and quest stats will appear here." />,
+  component: () => <SubPage bg={bg} title="Stats" illustration="stats" text="Your activity and quest stats will appear here." />,
 });

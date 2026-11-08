@@ -13,5 +13,5 @@ export const Route = createFileRoute("/chats")({
       { property: "og:description", content: "Chat with other students here soon." },
     ],
   }),
-  component: () => <SubPage bg={bg} title="Chats" emoji="💬" text="Chat with other students here soon." />,
+  component: () => <SubPage bg={bg} title="Chats" illustration="chats" text="Chat with other students here soon." />,
 });
