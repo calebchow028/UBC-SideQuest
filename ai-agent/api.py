@@ -19,6 +19,9 @@ class Student(BaseModel):
 class QuestRequest(BaseModel):
     student_a: Student
     student_b: Student
+    # Optional hints from the SideQuest backend.
+    max_duration_minutes: int | None = Field(default=None, ge=5, le=240)
+    allowed_locations: list[str] | None = Field(default=None, max_length=50)
 
 
 @app.get("/")
@@ -49,5 +52,7 @@ def create_quest(
 
     return generate_quest(
         request.student_a.model_dump(),
-        request.student_b.model_dump()
+        request.student_b.model_dump(),
+        max_duration_minutes=request.max_duration_minutes,
+        allowed_locations=request.allowed_locations
     )

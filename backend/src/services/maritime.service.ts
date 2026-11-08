@@ -11,7 +11,8 @@ import { APPROVED_LOCATIONS } from '../domain/quest-rules.js';
  */
 
 export interface QuestGenerationRequest {
-  users: Array<{ interests: string[]; comfortLevel: ComfortLevel }>;
+  /** The two matched users, in match order. `maxBudget` is that user's own budget (CAD). */
+  users: Array<{ interests: string[]; comfortLevel: ComfortLevel; maxBudget: number }>;
   /** Shared availability: the quest must not take longer than this. */
   durationMinutes: number;
   /** Shared budget in CAD per person: the quest must not cost more than this. */
@@ -32,37 +33,67 @@ export class MaritimeError extends Error {
   }
 }
 
-/** Translate our request into the agent's request body. */
+/**
+ * Translate our request into the agent's request body.
+ *
+ * Person 3's agent (ai-agent/api.py, `POST /generate-quest`) expects
+ * `{ student_a: { interests, budget, vibe }, student_b: { ... } }`. Our comfort level is sent as `vibe`.
+ * `max_duration_minutes` and `allowed_locations` are extra hints: the agent's Pydantic model ignores
+ * unknown fields, and our own validation enforces both rules regardless.
+ */
 export function toMaritimeRequest(req: QuestGenerationRequest): Record<string, unknown> {
+  const student = (u: QuestGenerationRequest['users'][number] | undefined) =>
+    u ? { interests: u.interests, budget: u.maxBudget, vibe: u.comfortLevel } : undefined;
   return {
-    users: req.users.map((u) => ({ interests: u.interests, comfortLevel: u.comfortLevel })),
-    durationMinutes: req.durationMinutes,
-    maxBudget: req.maxBudget,
-    // Extra hints so the agent can satisfy our validation rules up front.
-    allowedLocations: [...APPROVED_LOCATIONS],
+    student_a: student(req.users[0]),
+    student_b: student(req.users[1]),
+    max_duration_minutes: req.durationMinutes,
+    allowed_locations: [...APPROVED_LOCATIONS],
+  };
+}
+
+/** XP is not produced by the agent; derive it from duration so longer quests are worth more. */
+export function xpForDuration(minutes: number): number {
+  return Math.min(500, Math.max(5, Math.round((minutes * 2) / 5) * 5));
+}
+
+/** Map the agent's snake_case quest (`cost`, `duration_minutes`, no `xp`) onto our quest shape. */
+function normalizeQuest(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw;
+  const q = raw as Record<string, unknown>;
+  const durationMinutes = q.durationMinutes ?? q.duration_minutes;
+  const estimatedCost = q.estimatedCost ?? q.cost;
+  return {
+    title: q.title,
+    description: q.description,
+    location: q.location,
+    durationMinutes,
+    xp: q.xp ?? (typeof durationMinutes === 'number' && Number.isFinite(durationMinutes) ? xpForDuration(durationMinutes) : undefined),
+    ...(estimatedCost !== undefined ? { estimatedCost } : {}),
   };
 }
 
 /**
- * Translate the agent's response body into `{ title, description, location, durationMinutes, xp }`.
- * Accepts the documented flat object, and also unwraps `{ quest: {...} }`, `{ data: {...} }`, or
+ * Translate the agent's response body into `{ title, description, location, durationMinutes, xp, estimatedCost? }`.
+ * Accepts the agent's flat object, and also unwraps `{ quest: {...} }`, `{ data: {...} }`, or
  * `{ output: "<json string>" }` since agent platforms commonly wrap results.
+ * The result is still untrusted: the caller validates it with `validateAiQuest`.
  */
 export function fromMaritimeResponse(body: unknown): unknown {
   if (body && typeof body === 'object') {
     const obj = body as Record<string, unknown>;
     for (const key of ['quest', 'data'] as const) {
-      if (obj[key] && typeof obj[key] === 'object') return obj[key];
+      if (obj[key] && typeof obj[key] === 'object') return normalizeQuest(obj[key]);
     }
     if (typeof obj.output === 'string') {
       try {
-        return JSON.parse(obj.output) as unknown;
+        return normalizeQuest(JSON.parse(obj.output) as unknown);
       } catch {
         throw new MaritimeError('agent output was not valid JSON');
       }
     }
   }
-  return body;
+  return normalizeQuest(body);
 }
 
 export interface MaritimeClientOptions {
@@ -82,7 +113,7 @@ export class MaritimeClient implements QuestGenerator {
   async generateQuest(request: QuestGenerationRequest): Promise<unknown> {
     const headers: Record<string, string> = { 'content-type': 'application/json', accept: 'application/json' };
     // Server-side only: the key never leaves the backend.
-    if (this.opts.apiKey) headers.authorization = `Bearer ${this.opts.apiKey}`;
+    if (this.opts.apiKey) headers['x-api-key'] = this.opts.apiKey;
 
     let response: Response;
     let body: unknown;

@@ -2,8 +2,18 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { QuestConstraints } from '../src/domain/compatibility.js';
 import { FALLBACK_QUESTS, pickFallbackQuest } from '../src/domain/fallback-quests.js';
 import { QuestRejectedError, resolveApprovedLocation, validateAiQuest } from '../src/domain/quest-rules.js';
-import { MaritimeClient, MaritimeError, fromMaritimeResponse } from '../src/services/maritime.service.js';
+import { MaritimeClient, MaritimeError, fromMaritimeResponse, toMaritimeRequest, xpForDuration } from '../src/services/maritime.service.js';
 import { VALID_AI_QUEST, createHarness, fakeFetch, hangingFetch, jsonResponse, type Harness, type HarnessOptions } from './helpers/harness.js';
+
+/** Exactly the shape Person 3's agent returns (ai-agent/main.py). */
+const AGENT_QUEST = {
+  title: 'Main Mall Photo Walk',
+  description: 'Walk Main Mall together and each take three photos of interesting architecture, then pick a favourite.',
+  location: 'UBC Main Mall',
+  cost: 0,
+  duration_minutes: 20,
+  vibe: 'chill',
+};
 
 const constraints = (over: Partial<QuestConstraints> = {}): QuestConstraints => ({
   durationMinutes: 30,
@@ -91,7 +101,51 @@ describe('Maritime adapter (unit)', () => {
     expect(() => fromMaritimeResponse({ output: 'Sure! Here is a quest...' })).toThrow(MaritimeError);
   });
 
-  const req = { users: [{ interests: ['music'], comfortLevel: 'chill' as const }], durationMinutes: 20, maxBudget: 0 };
+  it("maps Person 3's snake_case response (cost, duration_minutes, no xp) onto our quest shape", () => {
+    const agentQuest = { ...AGENT_QUEST };
+    expect(fromMaritimeResponse(agentQuest)).toEqual({
+      title: AGENT_QUEST.title,
+      description: AGENT_QUEST.description,
+      location: 'UBC Main Mall',
+      durationMinutes: 20,
+      xp: 40,
+      estimatedCost: 0,
+    });
+    expect(fromMaritimeResponse({ quest: agentQuest })).toMatchObject({ durationMinutes: 20, xp: 40 });
+    // Mapped output passes validation, and "UBC Main Mall" is canonicalised.
+    expect(validateAiQuest(fromMaritimeResponse(agentQuest), constraints())).toMatchObject({ location: 'Main Mall', xp: 40 });
+    // An explicit xp from the agent wins; a non-numeric duration still fails validation.
+    expect(fromMaritimeResponse({ ...agentQuest, xp: 99 })).toMatchObject({ xp: 99 });
+    expect(() => validateAiQuest(fromMaritimeResponse({ ...agentQuest, duration_minutes: 'soon' }), constraints())).toThrow(QuestRejectedError);
+    expect(() => validateAiQuest(fromMaritimeResponse({ ...agentQuest, cost: 8 }), constraints({ maxBudget: 5 }))).toThrow(/cost/);
+  });
+
+  it('derives xp from duration within schema bounds', () => {
+    expect(xpForDuration(15)).toBe(30);
+    expect(xpForDuration(20)).toBe(40);
+    expect(xpForDuration(60)).toBe(120);
+    expect(xpForDuration(1)).toBe(5);
+    expect(xpForDuration(10_000)).toBe(500);
+  });
+
+  it("builds Person 3's request body (student_a / student_b with budget and vibe)", () => {
+    expect(
+      toMaritimeRequest({
+        users: [
+          { interests: ['photography', 'walking'], comfortLevel: 'chill', maxBudget: 10 },
+          { interests: ['photography', 'nature'], comfortLevel: 'chill', maxBudget: 5 },
+        ],
+        durationMinutes: 30,
+        maxBudget: 5,
+      }),
+    ).toMatchObject({
+      student_a: { interests: ['photography', 'walking'], budget: 10, vibe: 'chill' },
+      student_b: { interests: ['photography', 'nature'], budget: 5, vibe: 'chill' },
+      max_duration_minutes: 30,
+    });
+  });
+
+  const req = { users: [{ interests: ['music'], comfortLevel: 'chill' as const, maxBudget: 0 }], durationMinutes: 20, maxBudget: 0 };
 
   it('maps HTTP errors, timeouts, bad JSON and network failures to MaritimeError', async () => {
     const make = (fetch: ConstructorParameters<typeof MaritimeClient>[0]['fetch']) =>
@@ -125,14 +179,12 @@ describe('quest generation and retrieval', () => {
     const matchId = await matchPair({ maritimeFetch: maritime });
 
     expect(maritime.calls).toHaveLength(1);
-    expect(maritime.calls[0]!.headers.authorization).toBe('Bearer maritime-test-key');
+    expect(maritime.calls[0]!.headers['x-api-key']).toBe('maritime-test-key');
+    expect(maritime.calls[0]!.headers.authorization).toBeUndefined();
     expect(maritime.calls[0]!.body).toMatchObject({
-      users: [
-        { interests: ['music', 'food'], comfortLevel: 'chill' },
-        { interests: ['music', 'hiking'], comfortLevel: 'adventure' },
-      ],
-      durationMinutes: 20,
-      maxBudget: 0,
+      student_a: { interests: ['music', 'food'], budget: 5, vibe: 'chill' },
+      student_b: { interests: ['music', 'hiking'], budget: 0, vibe: 'adventure' },
+      max_duration_minutes: 20,
     });
     // No personal data beyond what the agent needs.
     expect(JSON.stringify(maritime.calls[0]!.body)).not.toMatch(/alice|bob/);
@@ -148,6 +200,12 @@ describe('quest generation and retrieval', () => {
       completion: { confirmedByMe: false, partnerConfirmed: false },
     });
     expect(h.services.repos.quests.findByMatchId(matchId)?.source).toBe('maritime');
+  });
+
+  it("1b. stores a quest returned in Person 3's exact response format", async () => {
+    const matchId = await matchPair({ maritimeFetch: fakeFetch(() => jsonResponse(AGENT_QUEST)) });
+    const quest = h.services.repos.quests.findByMatchId(matchId)!;
+    expect(quest).toMatchObject({ source: 'maritime', title: 'Main Mall Photo Walk', location: 'Main Mall', durationMinutes: 20, xp: 40 });
   });
 
   it('2. falls back to a predefined quest when the AI times out', async () => {

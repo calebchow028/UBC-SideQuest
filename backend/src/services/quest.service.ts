@@ -93,7 +93,7 @@ export class QuestService {
       if (!this.deps.generator) throw new Error('Maritime not configured');
       // One request for the pair: both users always share the same quest.
       const raw = await this.deps.generator.generateQuest({
-        users: [p1, p2].map((p) => ({ interests: p.interests, comfortLevel: p.comfortLevel })),
+        users: [p1, p2].map((p) => ({ interests: p.interests, comfortLevel: p.comfortLevel, maxBudget: p.maxBudget })),
         durationMinutes: constraints.durationMinutes,
         maxBudget: constraints.maxBudget,
       });

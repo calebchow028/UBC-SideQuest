@@ -67,7 +67,7 @@ See [.env.example](.env.example). Invalid config stops startup with a list of pr
 | `AUTH0_ISSUER_BASE_URL` | none | e.g. `https://dev-xyz.us.auth0.com/`. Required for `auth0` |
 | `AUTH0_AUDIENCE` | none | Auth0 API identifier. Required for `auth0` |
 | `MARITIME_AGENT_URL` | none | Quest agent endpoint. Empty = always use fallback quests |
-| `MARITIME_API_KEY` | none | Sent as `Authorization: Bearer …` to the agent |
+| `MARITIME_API_KEY` | none | Sent as `X-API-Key` to the agent |
 | `MARITIME_TIMEOUT_MS` | `10000` | Agent request timeout |
 | `N8N_WEBHOOK_URL` | none | n8n webhook. Empty = events disabled |
 | `N8N_WEBHOOK_SECRET` | none | Sent as `X-SideQuest-Secret` header |
@@ -248,21 +248,22 @@ The backend verifies signature (tenant JWKS), `iss`, `aud` and `exp`, and uses `
 
 When a match is created the backend makes **one** request for the pair:
 
+This matches Person 3's agent (`ai-agent/api.py`). `MARITIME_AGENT_URL` is the full endpoint, e.g. `https://<id>.mtm.sh/generate-quest`.
+
 ```http
 POST $MARITIME_AGENT_URL
-Authorization: Bearer $MARITIME_API_KEY      (if set)
+X-API-Key: $MARITIME_API_KEY      (if set)
 Content-Type: application/json
 
 {
-  "users": [
-    { "interests": ["music", "food"],   "comfortLevel": "chill" },
-    { "interests": ["music", "hiking"], "comfortLevel": "adventure" }
-  ],
-  "durationMinutes": 20,
-  "maxBudget": 0,
-  "allowedLocations": ["UBC Nest", "Irving K. Barber Learning Centre", "Koerner Library", "Main Mall", "Martha Piper Plaza", "UBC Rose Garden", "Buchanan Courtyard", "UBC Life Building", "UBC Bookstore", "Orchard Commons"]
+  "student_a": { "interests": ["music", "food"],   "budget": 5, "vibe": "chill" },
+  "student_b": { "interests": ["music", "hiking"], "budget": 0, "vibe": "adventure" },
+  "max_duration_minutes": 20,
+  "allowed_locations": ["UBC Nest", "Irving K. Barber Learning Centre", "Koerner Library", "Main Mall", "Martha Piper Plaza", "UBC Rose Garden", "Buchanan Courtyard", "UBC Life Building", "UBC Bookstore", "Orchard Commons"]
 }
 ```
+
+`vibe` is the user's comfort level. `max_duration_minutes` and `allowed_locations` are hints that the agent may ignore; the backend enforces both itself.
 
 Expected response (also accepted wrapped as `{ "quest": {...} }`, `{ "data": {...} }` or `{ "output": "<JSON string>" }`):
 
@@ -271,17 +272,19 @@ Expected response (also accepted wrapped as `{ "quest": {...} }`, `{ "data": {..
   "title": "The Playlist Exchange",
   "description": "Meet at the UBC Nest and exchange three favorite songs.",
   "location": "UBC Nest",
-  "durationMinutes": 20,
-  "xp": 50,
-  "estimatedCost": 0
+  "cost": 0,
+  "duration_minutes": 20,
+  "vibe": "chill"
 }
 ```
 
+`xp` is optional; if missing, the backend derives it from the duration (20 min = 40 XP). `vibe` is ignored. camelCase `durationMinutes` / `estimatedCost` are also accepted.
+
 Rules (`src/domain/quest-rules.ts`). If any fail, a predefined safe fallback quest is used and the match still proceeds:
 
-- **Schema:** title 3–80 chars, description 10–1000 chars, `durationMinutes` an integer 5–240, `xp` an integer 5–500, optional `estimatedCost` ≥ 0.
-- **Location:** must be on `allowedLocations`. Known aliases like "the Nest" or "IKB" are accepted.
-- **Time and money:** `durationMinutes` ≤ the shared `durationMinutes`, and `estimatedCost` ≤ `maxBudget`. With a $0 budget, no "buy/pay/tickets" wording is allowed.
+- **Schema:** title 3–80 chars, description 10–1000 chars, `duration_minutes` an integer 5–240, optional `cost` ≥ 0.
+- **Location:** must be on `allowed_locations`. Known aliases like "the Nest" or "IKB" are accepted.
+- **Time and money:** `duration_minutes` ≤ `max_duration_minutes` (the shorter availability), and `cost` ≤ the smaller of the two budgets. With a $0 budget, no "buy/pay/tickets" wording is allowed.
 - **Content:** a deterministic keyword blocklist rejects alcohol/drugs, weapons, trespassing/climbing/rooftops, private or off-campus places, romance, late night, pranks/dares, and requests for personal info.
 - **Timeout and failures:** the call times out after `MARITIME_TIMEOUT_MS`. Network errors and non-2xx responses also lead to the fallback.
 
