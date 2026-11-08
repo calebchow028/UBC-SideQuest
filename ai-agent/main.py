@@ -4,7 +4,7 @@ import os
 import math
 from openai import OpenAI
 
-MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 
 def generate_quest(student_a, student_b):
@@ -72,11 +72,13 @@ Do not include Markdown or explanations.
 """
 
     try:
-        api_key = os.getenv("OPENAI_API_KEY")
-        base_url = os.getenv("OPENAI_BASE_URL")
+        api_key = os.getenv("GEMINI_API_KEY")
+        base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
 
         if not api_key or not base_url:
-            raise RuntimeError("Maritime LLM credentials not configured")
+            if not api_key:
+                raise RuntimeError("Gemini API key not configured")
 
         client = OpenAI(api_key=api_key, base_url=base_url)
 
