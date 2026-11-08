@@ -2,7 +2,8 @@
 import json
 import os
 import math
-from openai import OpenAI
+import time
+from google import genai
 
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
@@ -72,25 +73,38 @@ Do not include Markdown or explanations.
 """
 
     try:
+        
         api_key = os.getenv("GEMINI_API_KEY")
-        base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+        if not api_key:
+            raise RuntimeError("Gemini API key not configured")
 
 
-        if not api_key or not base_url:
-            if not api_key:
-                raise RuntimeError("Gemini API key not configured")
+        
+        client = genai.Client(api_key=api_key)
 
-        client = OpenAI(api_key=api_key, base_url=base_url)
-
-        response = client.chat.completions.create(
+        interaction = client.interactions.create(
             model=MODEL,
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            timeout=30
+            input=prompt,
+            background=True
         )
 
-        ai_text = response.choices[0].message.content
+        print(f"Gemini interaction started: {interaction.id}")
+
+        deadline = time.monotonic() + 45
+
+        while interaction.status not in ("completed", "failed", "cancelled"):
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Gemini is still processing the quest")
+
+            time.sleep(3)
+            interaction = client.interactions.get(interaction.id)
+
+        if interaction.status != "completed":
+            raise RuntimeError(f"Gemini interaction ended: {interaction.status}")
+
+        ai_text = interaction.output_text
+
 
         if not ai_text:
             raise ValueError("AI returned an empty response")
